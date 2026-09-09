@@ -76,7 +76,6 @@ go_library(
         "//pkg/atomicbitops",
         "//pkg/bits",
         "//pkg/bpf",
-        "//pkg/cleanup",
         "//pkg/context",
         "//pkg/ebpf",
         "//pkg/errors/linuxerr",

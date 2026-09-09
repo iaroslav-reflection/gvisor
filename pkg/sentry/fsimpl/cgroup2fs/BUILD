@@ -14,7 +14,6 @@ go_library(
         "cpu.go",
         "cpu_mutex.go",
         "cpuset.go",
-        "cpuset_mutex.go",
         "event.go",
         "filesystem.go",
         "memory.go",
@@ -74,11 +73,4 @@ declare_mutex(
     out = "cpu_mutex.go",
     package = "cgroup2fs",
     prefix = "cpu",
-)
-
-declare_mutex(
-    name = "cpuset_mutex",
-    out = "cpuset_mutex.go",
-    package = "cgroup2fs",
-    prefix = "cpuset",
 )

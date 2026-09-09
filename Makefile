@@ -77,10 +77,6 @@ query: ## Runs a bazel query. E.g. make query TARGETS=//test/...
 	@$(call query,$(OPTIONS) $(TARGETS))
 .PHONY: query
 
-mod: ## Runs a bazel mod command. E.g. make mod TARGETS="deps --output json"
-	@$(call mod,$(OPTIONS) $(TARGETS))
-.PHONY: mod
-
 sudo: ## Runs the given $(TARGETS) as per run, but using "sudo -E". E.g. make sudo TARGETS=test/root:root_test ARGS=-test.v
 	@$(call sudo,$(TARGETS),$(ARGS))
 .PHONY: sudo
@@ -209,10 +205,6 @@ governance-check: governance-regen ## Checks that the files derived from governa
 	@git diff --exit-code -- CODEOWNERS MAINTAINERS.md || \
 		(echo "Generated governance files are out of sync. Please run \`make governance-regen\`." >&2; exit 1)
 .PHONY: governance-check
-
-license-check: ## Checks that tools/licensecheck/dependencies.yaml has an entry for every dependency.
-	@$(call run,//tools/licensecheck/main:licensecheck,--mode=verify)
-.PHONY: license-check
 
 ##
 ## Canonical build and test targets.
@@ -876,11 +868,6 @@ $(RELEASE_ARTIFACTS)/%:
 	@$(call copy,//debian:gvisor-release-tar-bz2,$@)
 	@$(call copy,//debian:gvisor-release-tar-zstd,$@)
 
-artifacts-python: ensure-bazel-server ## Builds Python SandboxExec wheels into $(RELEASE_ARTIFACTS)/python.
-	@mkdir -p $(RELEASE_ARTIFACTS)/python
-	@$(call wrapper,tools/make_python_release.sh build $(RELEASE_ARTIFACTS)/python "$(RELEASE_NAME)")
-.PHONY: artifacts-python
-
 release: $(RELEASE_KEY) $(RELEASE_ARTIFACTS)/$(ARCH)
 	@mkdir -p $(RELEASE_ROOT)
 	@NIGHTLY=$(RELEASE_NIGHTLY) tools/make_release.sh $(RELEASE_KEY) $(RELEASE_ROOT) $$(find $(RELEASE_ARTIFACTS) -type f)
@@ -910,7 +897,7 @@ else
 endif
 .PHONY: staged-binaries-check
 
-tag: ## Stages a release tag; the release pipeline publishes it once the artifacts are uploaded.
+tag: ## Creates and pushes a release tag.
 	@tools/tag_release.sh "$(RELEASE_COMMIT)" "$(RELEASE_NAME)" "$(RELEASE_NOTES)"
 .PHONY: tag
 

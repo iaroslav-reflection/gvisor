@@ -151,10 +151,9 @@ func (fs *filesystem) revalidateStep(ctx context.Context, rp resolvingPath, d *d
 	case "..":
 		// Partial revalidation is required when ".." is hit because metadata locks
 		// can only be acquired from parent to child to avoid deadlocks.
-		parent := d.parent.Load()
 		if isRoot, err := rp.CheckRoot(ctx, &d.vfsd); err != nil {
 			return nil, errRevalidationStepDone{}
-		} else if isRoot || parent == nil {
+		} else if isRoot || d.parent.Load() == nil {
 			rp.Advance()
 			return d, errPartialRevalidation{}
 		}
@@ -165,11 +164,11 @@ func (fs *filesystem) revalidateStep(ctx context.Context, rp resolvingPath, d *d
 		//
 		// Call rp.CheckMount() before updating d.parent's metadata, since if
 		// we traverse to another mount then d.parent's metadata is irrelevant.
-		if err := rp.CheckMount(ctx, &parent.vfsd); err != nil {
+		if err := rp.CheckMount(ctx, &d.parent.Load().vfsd); err != nil {
 			return nil, errRevalidationStepDone{}
 		}
 		rp.Advance()
-		return parent, errPartialRevalidation{}
+		return d.parent.Load(), errPartialRevalidation{}
 
 	default:
 		d.childrenMu.Lock()

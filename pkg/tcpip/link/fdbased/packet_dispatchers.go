@@ -202,7 +202,7 @@ func (d *readVDispatcher) dispatch() (bool, tcpip.Error) {
 	addr := d.e.addr
 	d.e.mu.RUnlock()
 	if !d.e.parseInboundHeader(pkt, addr) {
-		return true, nil
+		return false, nil
 	}
 	d.mgr.queuePacket(pkt, d.e.hdrSize > 0)
 	d.mgr.wakeReady()

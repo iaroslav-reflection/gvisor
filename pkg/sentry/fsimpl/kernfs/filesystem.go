@@ -56,18 +56,17 @@ func (fs *Filesystem) stepExistingLocked(ctx context.Context, rp *vfs.ResolvingP
 		return d, false, nil
 	}
 	if name == ".." {
-		parent := d.parent.Load()
 		if isRoot, err := rp.CheckRoot(ctx, d.VFSDentry()); err != nil {
 			return nil, false, err
-		} else if isRoot || parent == nil {
+		} else if isRoot || d.parent.Load() == nil {
 			rp.Advance()
 			return d, false, nil
 		}
-		if err := rp.CheckMount(ctx, parent.VFSDentry()); err != nil {
+		if err := rp.CheckMount(ctx, d.Parent().VFSDentry()); err != nil {
 			return nil, false, err
 		}
 		rp.Advance()
-		return parent, false, nil
+		return d.parent.Load(), false, nil
 	}
 	if len(name) > linux.NAME_MAX {
 		return nil, false, linuxerr.ENAMETOOLONG
@@ -835,16 +834,14 @@ func (fs *Filesystem) RenameAt(ctx context.Context, rp *vfs.ResolvingPath, oldPa
 	}
 
 	srcVFSD := src.VFSDentry()
-	handle, err := virtfs.PrepareRenameDentry(mntns, srcVFSD, dstVFSD)
-	if err != nil {
+	if err := virtfs.PrepareRenameDentry(mntns, srcVFSD, dstVFSD); err != nil {
 		return err
 	}
 	err = srcDir.inode.Rename(ctx, src.name, newName, src.inode, dstDir.inode)
 	if err != nil {
-		virtfs.AbortRenameDentry(&handle, srcVFSD, dstVFSD)
+		virtfs.AbortRenameDentry(srcVFSD, dstVFSD)
 		return err
 	}
-	virtfs.RenameBegin(&handle)
 	delete(srcDir.children, src.name)
 	if srcDir != dstDir {
 		fs.deferDecRef(srcDir) // child (src) drops ref on old parent.
@@ -865,7 +862,7 @@ func (fs *Filesystem) RenameAt(ctx context.Context, rp *vfs.ResolvingPath, oldPa
 		replaced.setDeleted()
 	}
 	vfs.InotifyRename(ctx, src.inode.Watches(), srcDir.inode.Watches(), dstDir.inode.Watches(), oldName, newName, src.isDir())
-	for _, rc := range virtfs.CommitRenameReplaceDentry(ctx, &handle, srcVFSD, replaceVFSD) { // +checklocksforce: to may be nil, that's okay.
+	for _, rc := range virtfs.CommitRenameReplaceDentry(ctx, srcVFSD, replaceVFSD) { // +checklocksforce: to may be nil, that's okay.
 		fs.deferDecRef(rc)
 	}
 	return nil

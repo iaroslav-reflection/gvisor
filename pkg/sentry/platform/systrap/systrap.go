@@ -43,10 +43,7 @@
 //
 //	subprocessPool.mu
 //		subprocess.mu
-//
-//	subprocess.aliveMu
-//		subprocess.syscallThreadMu
-//		subprocess.sysmsgThreadsMu
+//			platformContext.mu
 //
 // +checkalignedignore
 package systrap
@@ -176,9 +173,6 @@ func (c *platformContext) FullStateChanged() {
 func (c *platformContext) Switch(ctx pkgcontext.Context, mm platform.MemoryManager, ac *arch.Context64, cpu int32) (*linux.SignalInfo, hostarch.AccessType, error) {
 	as := mm.AddressSpace()
 	s := as.(*subprocess)
-	if s.dead.Load() {
-		return nil, hostarch.NoAccess, errDeadSubprocessContext
-	}
 	if err := s.activateContext(c); err != nil {
 		return nil, hostarch.NoAccess, err
 	}

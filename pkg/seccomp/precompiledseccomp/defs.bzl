@@ -8,8 +8,7 @@ def precompiled_seccomp_rules(
         programs_to_compile_go_import,
         out,
         out_package_name,
-        exclude_in_fastbuild = False,
-        tags = []):
+        exclude_in_fastbuild = False):
     """Generates a Go source file containing precompiled seccomp-bpf programs.
 
     Args:
@@ -28,7 +27,6 @@ def precompiled_seccomp_rules(
         out_package_name: Go package name that `out` belongs to.
         exclude_in_fastbuild: Whether to skip precompilation in fastbuild mode.
             The auto-generated `GetPrecompiled` function will fail all lookups.
-        tags: List of tags to pass to the generated genrule.
     """
     if exclude_in_fastbuild:
         native.config_setting(
@@ -142,7 +140,6 @@ def precompiled_seccomp_rules(
                 ":" + name + "_fastbuild_cond": [":" + name + "_gen_stubbed_bin"],
                 "//conditions:default": [":" + name + "_gen_bin"],
             }),
-            tags = tags + ["requires-mem:16g"],
         )
     else:
         native.genrule(
@@ -152,5 +149,4 @@ def precompiled_seccomp_rules(
                 "$(location :" + name + "_gen_bin) --package='" + out_package_name + "' --out=$@"
             ),
             tools = [":" + name + "_gen_bin"],
-            tags = tags + ["requires-mem:16g"],
         )

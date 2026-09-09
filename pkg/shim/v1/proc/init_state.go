@@ -127,7 +127,11 @@ func (s *createdState) Exec(ctx context.Context, path string, r *ExecConfig) (ex
 }
 
 func (s *createdState) State(ctx context.Context) (string, error) {
-	return s.p.state(ctx)
+	state, err := s.p.state(ctx)
+	if err == nil && state == statusStopped {
+		s.transition(stopped)
+	}
+	return state, err
 }
 
 func (s *createdState) Stats(ctx context.Context, id string) (*runc.Stats, error) {
@@ -177,7 +181,11 @@ func (s *runningState) Exec(_ context.Context, path string, r *ExecConfig) (exte
 }
 
 func (s *runningState) State(ctx context.Context) (string, error) {
-	return s.p.state(ctx)
+	state, err := s.p.state(ctx)
+	if err == nil && state == "stopped" {
+		s.transition(stopped)
+	}
+	return state, err
 }
 
 func (s *runningState) Stats(ctx context.Context, id string) (*runc.Stats, error) {

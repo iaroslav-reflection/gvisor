@@ -68,6 +68,7 @@ import (
 	"gvisor.dev/gvisor/pkg/sentry/usage"
 	"gvisor.dev/gvisor/pkg/sentry/vfs"
 	"gvisor.dev/gvisor/pkg/timing"
+	"gvisor.dev/gvisor/pkg/usermem"
 	"gvisor.dev/gvisor/runsc/config"
 	"gvisor.dev/gvisor/runsc/specutils"
 )
@@ -1357,11 +1358,29 @@ func (c *containerMounter) getSharedMount(ctx context.Context, spec *specs.Spec,
 //
 // +checklocks:l.mu
 func (l *Loader) setupCgroup2() error {
-	cg2Mount, err := cgroup2fs.InitHierarchy(l.k.SupervisorContext(), l.k)
-	if err != nil {
-		return err
+	l.cgroup2Mount = cgroup2fs.NewInternalMount(l.k, l.k.VFS())
+	cgroup2fs.SetNSDelegate(l.k, true)
+
+	// Enable all supported controllers for per-container child cgroups. The
+	// root cgroup is exempt from the no-internal-processes rule, and no
+	// application tasks exist yet at this point anyway.
+	ctx := l.k.SupervisorContext()
+	creds := auth.NewRootCredentials(l.k.RootUserNamespace())
+	root := vfs.MakeVirtualDentry(l.cgroup2Mount, l.cgroup2Mount.Root())
+	pop := vfs.PathOperation{
+		Root:  root,
+		Start: root,
+		Path:  fspath.Parse("cgroup.subtree_control"),
 	}
-	l.cgroup2Mount = cg2Mount
+	fd, err := l.k.VFS().OpenAt(ctx, creds, &pop, &vfs.OpenOptions{Flags: linux.O_WRONLY})
+	if err != nil {
+		return fmt.Errorf("opening cgroup.subtree_control: %w", err)
+	}
+	defer fd.DecRef(ctx)
+	data := []byte("+cpu +memory +pids +cpuset")
+	if _, err := fd.Write(ctx, usermem.BytesIOSequence(data), vfs.WriteOptions{}); err != nil {
+		return fmt.Errorf("enabling cgroup2 controllers: %w", err)
+	}
 	return nil
 }
 

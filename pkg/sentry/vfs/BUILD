@@ -211,7 +211,6 @@ go_test(
     name = "vfs_test",
     size = "small",
     srcs = [
-        "dentry_test.go",
         "device_test.go",
         "file_description_impl_util_test.go",
         "mount_test.go",
